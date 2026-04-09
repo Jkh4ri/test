@@ -117,12 +117,6 @@ def startgame():
             st.divider()
 
         humanplayer()
-        # Call responseAI and display its returned responses as well
-        extra_ai = responseAI(st.session_state.current_question)
-        if extra_ai:
-            st.subheader("responseAI outputs")
-            for ai_answer in extra_ai:
-                st.write(f"{ai_answer['name']}: {ai_answer['response']}")
         resetgame()
 
 def resetgame():
