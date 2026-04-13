@@ -73,13 +73,8 @@ questions = [
     "What is a piece of media that has influenced you significantly and why?",
     "You enter a nondescript room. What is the first thing you are going to do?",
 ]
-
 def init_game_state():
     defaults = {
-        "started": False,
-        "human_name": "",
-        "round_number": 0,
-        "current_question": "",
         "ai_names": [],
         "ai_personalities": [],
         "ai_answers": [],
@@ -90,99 +85,14 @@ def init_game_state():
     }
     for key, value in defaults.items():
         if key not in st.session_state:
-            st.session_state[key] = value
+             st.session_state[key] = value
 
-
-def startgame():
-    st.set_page_config(page_title="Reverse Turing Test", page_icon="🤖", layout="centered")
-    st.title("Reverse Turing Test")
-    st.write("This is a simple reverse Turing test. Try to convince the AI that you are a human!")
-    st.info("There are 4 AI players and you are the only human. Answer each question convincingly, then continue to the next round.")
-    init_game_state()
-    if not token:
-        st.warning("GITHUB_TOKEN not set — AI responses may fail. Set GITHUB_TOKEN in your environment.")
-    if not st.session_state.started:
-        if st.button("Start the game"):
-            st.session_state.started = True
-            st.session_state.human_name = rd.choice(random_names)
-            # initialize persistent AI names and personalities for the whole game
-            if not st.session_state.ai_names:
-                st.session_state.ai_names = rd.sample(random_names, 4)
-            if not st.session_state.ai_personalities:
-                st.session_state.ai_personalities = rd.sample(random_personality, 4)
-            generate_round()
-            st.rerun()
-    else:
-        st.write(f"Round {st.session_state.round_number}")
-        st.write(f"You are playing as: {st.session_state.human_name}")
-        # Render history (previous rounds): AI answers then human response
-        if st.session_state.history:
-            st.subheader("Previous rounds")
-            for entry in st.session_state.history:
-                st.write(f"Round {entry['round_number']}")
-                st.write(f"Question: {entry['question']}")
-                st.write("AI responses:")
-                for ai in entry.get("ai_answers", []):
-                    st.write(f"**{ai.get('name','AI')}** ({ai.get('personality','')}) - Model: {ai.get('model','')}")
-                    st.write(ai.get('response',''))
-                    st.divider()
-                if entry.get('human_response'):
-                    st.write(f"{entry.get('human_name','You')}: {entry.get('human_response')}")
-                st.markdown("---")
-        st.subheader("Question")
-        st.write(st.session_state.current_question)
-
-        st.subheader("AI responses")
-        for ai in st.session_state.ai_answers:
-            st.write(f"**{ai.get('name','AI')}** ({ai.get('personality','')}) - Model: {ai.get('model','')}")
-            st.write(ai.get('response',''))
-            st.divider()
-
-        humanplayer()
-        resetgame()
-
-def resetgame():
-    if st.button("Reset the game"):
-        st.session_state.started = False
-        st.session_state.human_name = ""
-        st.session_state.ai_names = []
-        st.session_state.ai_personalities = []
-        st.session_state.round_number = 0
-        st.session_state.current_question = ""
-        st.session_state.ai_answers = []
-        st.session_state.human_response = ""
-        st.session_state.history = []
-        st.session_state.human_response_input = ""
-        st.session_state.clear_human_input = True
-        st.rerun()
-
-def askquestion():
-    return rd.choice(questions)
-
-
-def humanplayer():
-    if st.session_state.clear_human_input:
-        st.session_state.human_response_input = ""
-        st.session_state.clear_human_input = False
-
-    st.text_input("Your response:", key="human_response_input")
-    if st.button("Submit response"):
-        st.session_state.human_response = st.session_state.human_response_input.strip()
-
-    if st.session_state.human_response:
-        st.write(f"{st.session_state.human_name}: {st.session_state.human_response}")
-
-    # Only allow advancing after a response is submitted
-    if st.session_state.human_response:
-        if st.button("Next round"):
-            save_current_round()
-            st.session_state.human_response = ""
-            st.session_state.clear_human_input = True
-            generate_round()
-            st.rerun()
-    else:
-        st.button("Next round", disabled=True)
-        st.info("Submit your response before proceeding to the next round.")
+def generate_personalities():
+    return rd.sample(random_personality, 4)
+def generate_questions():
+    return rd.sample(questions, 3)
+def humanplayer(name):
+    st.text_input(f"{name}'s response:", key=name)
 
 def build_messages(name, personality, question):
     system_prompt = (
@@ -193,7 +103,6 @@ def build_messages(name, personality, question):
         "Answer only the user's question in 1 or 2 short sentences."
     )
     return [SystemMessage(system_prompt), UserMessage(question)]
-
 
 def responseAI(names, personalities, question):
     models = [PRIMARY_MODEL, SECONDARY_MODEL, PRIMARY_MODEL, SECONDARY_MODEL]
@@ -223,22 +132,36 @@ def responseAI(names, personalities, question):
         })
     return ai_answers
 
-
-def save_current_round():
-    entry = {
-        "round_number": st.session_state.round_number,
-        "question": st.session_state.current_question,
-        "ai_answers": st.session_state.ai_answers.copy(),
-        "human_response": st.session_state.human_response,
-        "human_name": st.session_state.human_name,
-    }
-    st.session_state.history.append(entry)
-
-
 def generate_round():
-    st.session_state.round_number += 1
-    st.session_state.current_question = askquestion()
-    st.session_state.ai_answers = responseAI(st.session_state.ai_names, st.session_state.ai_personalities, st.session_state.current_question)
+    sampled_names = rd.sample(random_names, 5)
+    name = sampled_names[0]
+    names = sampled_names[1:]
+    personalities = generate_personalities()
+    questions = generate_questions()
+    st.header("AI Players")
+    for question in questions:
+        ai_responses = responseAI(names, personalities, question)
+        for i, response in enumerate(ai_responses):
+            st.text(f"{names[i]}: {response}")
+    st.header("Human Players")
+    humanplayer(name)
+
+def start_game():
+    st.set_page_config(page_title="Reverse Turing Test", page_icon="🤖", layout="centered")
+    st.title("Reverse Turing Test")
+    st.write("This is a simple reverse Turing test. Try to convince the AI that you are a human!")
+    st.info("There are 4 AI players and you are the only human. Answer each question convincingly, then continue to the next round.")
+    init_game_state()
+    if not token:
+        st.warning("GITHUB_TOKEN not set — AI responses may fail. Set GITHUB_TOKEN in your environment.")
+    if not st.session_state.started:
+        if st.button("Start the game"):
+            st.session_state.started = True
+            generate_round()
+            st.rerun()
+    else:
+        st.write(f"Round {st.session_state.round_number}")
+        
 
 if __name__ == "__main__":
-    startgame()
+    start_game()
