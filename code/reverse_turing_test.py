@@ -201,7 +201,7 @@ def humanplayer():
 def callvote():
     st.subheader("Voting Phase")
     st.write(f"**{st.session_state.human_name}:** {st.session_state.human_response}")
-    st.write("Who do you think is an AI? Select a name to vote them out.")
+    st.write("Who do you think the AI's will vote for? Select a name to vote them out.")
 
     # Only show players still in the game
     active_ai = [
